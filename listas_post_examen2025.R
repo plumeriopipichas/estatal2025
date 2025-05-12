@@ -16,46 +16,18 @@ porescuela_extra<-
 
 print(names(porescuela_extra))
 
-#indep1<-read.csv("../listas_crudas/independientes_formulario.csv")%>%
-#        select("Correo"=Dirección.de.correo.electrónico,Nombre,Primer_apellido,Segundo_apellido,Grado.de.estudios,
-#                    "Escuela"=Escuela.de.procedencia,"Municipio"=Municipio.de.residencia,Sede)
-#indep2<-read.csv("../listas_crudas/independientes_formulario_posterior.csv")%>%
-#          select("Correo"=Dirección.de.correo.electrónico,Nombre,Primer_apellido,Segundo_apellido,Grado.de.estudios,
-#                "Escuela"=Escuela.de.procedencia,"Municipio"=Municipio.de.residencia,Sede)
-#x<-which(!indep2$Correo%in%indep1$Correo)
-#write.csv(indep2[x, ],"../listas_generadas/extras_independientes.csv",row.names = FALSE)
-
-#independientes_extra<-
-#  read.csv("../listas_generadas/extras_independientes.csv",encoding = "UTF-8")
-#indep_preregistro<-read.csv("../listas_crudas/preregistro_independiente.csv")%>%
-#  select(CURP,Correo)
-
-#independientes_extra <- 
-#  merge(indep_preregistro,independientes_extra,  by = "Correo", all.y=TRUE)%>%unique()
-
-# Asegura que CURP esté en mayúsculas
-#independientes_extra <- independientes_extra %>%
-#  mutate(CURP = toupper(CURP))
-
-#write.csv(independientes_extra,"../listas_generadas/indep_extra2.csv")
-
-#independientes_extra$Escuela<-"Participante Independiente"
-#independientes_extra$Clave_escuela <- NA
-#independientes_extra$Correo_escuela <- NA
-
-
 agregar_independientes<-read.csv("../listas_crudas/agregar_independientes.csv",encoding="UTF-8")
 agregar_independientes$Clave_escuela<-NA
-
+agregar_independientes$Correo_escuela<-NA
 
 aux <- intersect(names(porescuela_extra),names(agregar_independientes))
 
 lista_registros_tardios <- 
   rbind(select(porescuela_extra,all_of(aux)),select(agregar_independientes,all_of(aux)))
 lista_registros_tardios$Escuela <- subte(lista_registros_tardios$Escuela)
-       
 
-lista_previa <- read.csv("../listas_generadas/lista_general_registro.csv")
+
+lista_previa <- read.csv("../listas_generadas/lista_general_registro_anclado.csv")
 lista_nueva <- read.csv("../listas_generadas/lista_general_registro_.csv")
 lista_general<-merge(select(lista_previa,clave,Grado.escolar),lista_nueva,by="clave",all=TRUE)
 aux <- intersect(names(lista_general),names(lista_registros_tardios))
@@ -126,7 +98,7 @@ lista_respuestas$Puntos <- 0
 for (i in 1:nrow(lista_respuestas)) {
   respuestas_alumno <- as.character(lista_respuestas[i, paste0("Resp_", 1:12)])
   aciertos <- respuestas_alumno == correctas
-  puntaje <- sum(valores[aciertos]) + 5  # Bonificación final
+  puntaje <- sum(valores[aciertos]) 
   lista_respuestas$Puntos[i] <- puntaje
 }
 
@@ -198,7 +170,6 @@ lista_general_puntuaciones <- lista_general_puntuaciones %>%
     Resp_7, Resp_8, Resp_9, Resp_10, Resp_11, Resp_12
   )
 
-print("A")
 
 lista_general_puntuaciones<-lista_general_puntuaciones%>%
   mutate(Nombre_completo=paste(Nombre,Primer_apellido,Segundo_apellido))
@@ -209,28 +180,121 @@ write.csv(lista_general_puntuaciones,"../listas_generadas/revisar_falta_nivel.cs
 #-------------- varias listas para entregar: comite de examen, constancias de participacion
 
 lista_secundaria_local<-filter(lista_general_puntuaciones,!nivel=="media superior")%>%
-  select(clave,Aciertos,Puntos,Nombre_completo,Grado.escolar)%>%
+  select(clave,Aciertos,Puntos,Nombre_completo,Grado.escolar,Escuela,nivel,
+         Correo,Correo_escuela)%>%
   unique()
-lista_preparatoria_local<-filter(lista_general_puntuaciones,!nivel=="secundaria")%>%
-  select(clave,Aciertos,Puntos,Nombre_completo)%>%
-  unique()%>%
-  !is.na(Nombre_completo)
-  
-  print("B")
-comite_examen_secundaria <- filter(lista_secundaria_local,!is.na(Nombre_completo))%>%
-                            select(clave,Aciertos,Puntos)%>%
-                            unique()%>%
-                            !is.na(Nombre_completo)
-                                 
-comite_examen_preparatoria <- filter(lista_preparatoria_local,!is.na(Nombre_completo))%>%
-                             select(clave,Aciertos,Puntos)%>%
-                              unique()%>%
-                              !is.na(Nombre_completo)
 
+lista_preparatoria_local<-filter(lista_general_puntuaciones,!nivel=="secundaria")%>%
+  select(clave,Aciertos,Puntos,Nombre_completo,Grado.escolar,Escuela,nivel,
+         Correo,Correo_escuela)%>%
+  unique()
+  
+comite_examen_secundaria <- filter(lista_secundaria_local,nchar(nivel)>0)%>%
+                            select(clave,Aciertos,Puntos)%>%
+                            unique()
+                                 
+comite_examen_preparatoria <- filter(lista_preparatoria_local,nchar(nivel)>0)%>%
+                             select(clave,Aciertos,Puntos)%>%
+                              unique()
 
 write.csv(lista_secundaria_local,"../listas_generadas/local_examen_secu.csv")
 write.csv(lista_preparatoria_local,"../listas_generadas/local_examen_prepa.csv")
 write.csv(comite_examen_secundaria,"../listas_generadas/comite_examen_secu.csv")
 write.csv(comite_examen_preparatoria,"../listas_generadas/comite_examen_prepa.csv")
+
+#---------------- la lista para la segunda etapa
+
+corte_sec<-26
+corte_bach<-29
+
+segunda_etapa_sec <- filter(lista_secundaria_local,Puntos>corte_sec)%>%
+  select(Nombre_completo,Escuela,nivel,Correo,Correo_escuela,Puntos)
+
+segunda_etapa_ms <- filter(lista_preparatoria_local,Puntos>corte_bach)%>%
+  select(Nombre_completo,Escuela,nivel,Correo,Correo_escuela,Puntos)
+
+
+segunda_etapa<-rbind(segunda_etapa_sec,segunda_etapa_ms)%>%
+  select(Nombre_completo,Equipo=Escuela,Correo,Correo_escuela,Puntos,nivel)
+
+
+segunda_etapa$Equipo <- subte(segunda_etapa$Equipo)
+
+#directos <- read.csv("../listas_crudas/directos_segunda.csv")
+
+#segunda_etapa_todos <- rbind(select(segunda_etapa,all_of(names(directos))),
+ #                            directos)
+
+correos_segunda_etapa<-unique(c(segunda_etapa$Correo,segunda_etapa$Correo_escuela))
+publicar_segunda_etapa<-filter(segunda_etapa,nchar(nivel)>0)%>%
+                        select(Nombre_completo,Equipo,nivel)%>%
+                        arrange(Nombre_completo)
+
+write.csv(segunda_etapa,"../listas_generadas/segunda_etapa_general.csv",row.names = FALSE)
+write.csv(publicar_segunda_etapa,"../listas_generadas/segunda_etapa_publica.csv",row.names = FALSE)
+write.csv(correos_segunda_etapa,"../listas_generadas/correos_2e.csv",row.names = FALSE)
+
+#----------para sacar puntuaciones por escuela
+
+revision_escuelas <-select(lista_general_puntuaciones,-c(CURP,clave,Grado.escolar,
+                        Correo_escuela,Correo,sede))%>%
+                    filter(!is.na(Clave_escuela))
+
+revision_escuelas<-unique(revision_escuelas)
+revision_escuelas<-group_by(revision_escuelas,Clave_escuela)
+
+revisar_escuelas<-summarise(revision_escuelas,cuantos=n(),total_aciertos=sum(Aciertos),
+                          suma_puntos=sum(Puntos),varianza=var(Puntos),)%>%
+                          arrange(desc(suma_puntos),varianza)
+
+revision_escuelas<-ungroup(revision_escuelas)
+#--------------------------------------------
+# para hacer las constancias
+
+para_constancias <- select(lista_general_puntuaciones,Nombre,Primer_apellido,Segundo_apellido,
+                           Escuela,Correo,Correo_escuela)
+
+
+x<-grep("@",para_constancias$Correo)
+y<-grep("@",para_constancias$Correo_escuela)
+para_constancias<-para_constancias[union(x,y), ]
+para_constancias$Escuela<-subte(para_constancias$Escuela)
+para_constancias$Nombre_completo<-paste(para_constancias$Nombre,
+                                        para_constancias$Primer_apellido,para_constancias$Segundo_apellido)
+
+para_constancias<-select(para_constancias,Nombre_completo,Escuela,Correo,Correo_escuela)
+para_constancias$Correo<-subte_correo(para_constancias$Correo)
+para_constancias$Correo_escuela<-subte_correo(para_constancias$Correo_escuela)
+para_constancias<-unique(para_constancias)%>%
+                  arrange(Nombre_completo)
+
+inicio <- 409
+para_constancias$folio <- inicio:(inicio+nrow(para_constancias)-1)  
+
+write.csv(para_constancias,"../listas_generadas/lista_constancias_participacion.csv",
+          row.names = FALSE)
+
+
+segunda_etapa_todos<-rbind(lista_secundaria_local,lista_preparatoria_local)%>%
+                  select(Nombre_completo,Escuela,Correo,Correo_escuela)
+
+
+constancias_segundo <- select(segunda_etapa_todos,Nombre_completo,Escuela,Correo,Correo_escuela)
+
+x<-grep("@", constancias_segundo$Correo)
+y<-grep("@", constancias_segundo$Correo_escuela)
+constancias_segundo<-constancias_segundo[union(x,y), ]
+
+
+constancias_segundo<-unique(constancias_segundo)%>%
+            arrange(Nombre_completo)
+constancias_segundo$Correo<-subte_correo(constancias_segundo$Correo)
+constancias_segundo$Correo_escuela<-subte_correo(constancias_segundo$Correo_escuela)            
+            
+inicio <- nrow(para_constancias)+1
+constancias_segundo$folio <- inicio:(inicio+nrow(constancias_segundo)-1)  
+
+write.csv(constancias_segundo,"../listas_generadas/lista_constancias_segundo.csv",
+          row.names = FALSE)
 
 

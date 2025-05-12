@@ -144,6 +144,7 @@ subte <- function(x){
   x<-gsub("CECYTE HIDALGO","CECYTEH",x,ignore.case = TRUE)
   x<-gsub("COBAEH","COBAEH",x,ignore.case = TRUE)
   x<-gsub("CECYTEH","CECYTEH",x,ignore.case = TRUE)
+  x<-gsub("CECYTE-","CECYTE ",x,ignore.case = TRUE)
   x<-gsub("UAEH","UAEH",x,ignore.case = TRUE)
   x<-gsub("IPN","IPN",x,ignore.case = TRUE)
   x<-gsub("cbtys","CBTIS",x,ignore.case = TRUE)
@@ -153,6 +154,7 @@ subte <- function(x){
   x<-gsub("CBTA","CBTA",x,ignore.case = TRUE)
   x<-gsub("CETIS","CETIS",x,ignore.case = TRUE)
   x<-gsub("CECYT","CECyT",x,ignore.case = TRUE)
+  x<-gsub("C.E.C.Y.T. ","CECyT ",x,ignore.case = TRUE)
   x<-gsub("Plantel","",x,ignore.case = TRUE)
   x<-gsub("ES de Cd. Sahagún t/v","ES Ciudad Sahagun UAEH",x,ignore.case = TRUE)
   x<-gsub("ES de Cd. Sahagún t/v","ES Ciudad Sahagun UAEH",x,ignore.case = TRUE)
@@ -183,7 +185,7 @@ subte <- function(x){
   x<-gsub("a2","a 2",x,ignore.case = TRUE)
   x<-gsub("Sec.tecnica","Secundaria Técnica",x,ignore.case = TRUE)
   x<-gsub("federal por cooperacion","",x,ignore.case = TRUE)
- 
+  x<-gsub("Centro de Bachillerato Tecnológico Industrial y de Servicios","CBTIS",x,ignore.case = TRUE)
   return(x)
 }
 
